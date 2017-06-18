@@ -18,7 +18,7 @@ There are some global variables at the top of `differ.py` that you can modify to
 
 ### run
 ```bash
-$ ./differ.py
+./differ.py
 ```
 
 outputs something like:
