@@ -25,8 +25,8 @@ def parse_collages(tree):
         collage['url'] = url
         p = urlparse.urlparse(url)
         collage['id'] = urlparse.parse_qs(p.query)['id'][0]
-        collage['torrents'] = to_number(columns[2].text_content())
-        collage['subscribers'] = to_number(columns[3].text_content())
+        collage['num_torrents'] = to_number(columns[2].text_content())
+        collage['num_subscribers'] = to_number(columns[3].text_content())
         update_str = columns[4].find('span').attrib['title']
         # Can be parsed with
         #   datetime.strptime(update_str, '%b %d %Y, %H:%M')
@@ -64,6 +64,10 @@ class Session(requests.Session):
         data = {'username': username, 'password': password}
         r = self.post(self.url('login.php'), data=data)
         return r.status_code == 200
+
+    def collage(self, collage_id):
+        data = {'action': 'collage', 'id': collage_id}
+        return self.get(self.url('/ajax.php'), params=data)
 
     def bookmarked_collages(self, max_pages=20):
         data = {'type': 'collages', 'page': 1}
