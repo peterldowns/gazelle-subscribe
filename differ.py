@@ -6,10 +6,13 @@ import time
 
 from gazelle import Session
 
-
+# The website you're checking
 HOST = 'redacted.ch'
+# {"username": "xxx", "password": "yyy"}
 CREDENTIALS_FILENAME = 'credentials.json'
+# Filename to store the collage / torrent information for future comparison.
 DUMP_FILENAME = 'collages.jsonlines'
+# Filename to store the last-calculated diff.
 DIFF_FILENAME = 'diff.json'
 
 
@@ -101,7 +104,6 @@ def alert(s, diff):
         print('{} collages have been {}:'.format(len(diff[key]), key))
         for collage in diff[key]:
             print_collage(collage)
-
     print('{} collages have been modified:'.format(len(diff['modified'])))
     for m in diff['modified']:
         old = m['old']
@@ -117,7 +119,6 @@ def alert(s, diff):
         for t in torrents_diff['added']:
             print_torrent(t, '+')
         print('')
-
     print('Done.\n')
 
 
@@ -159,16 +160,17 @@ def main():
     # Keep track of the torrents in each collage. Update the "new" version of
     # each of these.
     to_update = [d['new'] for d in diff['modified']] + diff['added']
-    to_update = new_collages
     print('updating %d items' % len(to_update))
     for _ in timeout_consume(3.0, torrent_adder(s), to_update):
         sys.stdout.write('.')
+        sys.stdout.flush()
     sys.stdout.write('\n')
 
-    for collage in to_update:
-        assert 'torrents' in collage
-
+    # Display the diff to the user.
     alert(s, diff)
+
+    # Write the latest diff and dump the latest information for future
+    # comparison.
     write_diff(diff)
     write_dump(new_collages)
 
