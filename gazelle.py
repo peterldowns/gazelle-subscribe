@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # coding: utf-8
 import requests
 import urllib.parse as urlparse
 import lxml.html
 import re
-from datetime import datetime
 
 
 def to_number(s):
@@ -13,9 +11,9 @@ def to_number(s):
 
 def parse_collages(tree):
     table = tree.find_class('collage_table')
-    table = table and table[0] or None
-    if table is None:
+    if not len(table):
         raise Exception('could not find collage table')
+    table = table[0]
     _, *rows = table.iterchildren()
     for row in rows:
         collage = {}
@@ -34,6 +32,7 @@ def parse_collages(tree):
         #   datetime.strptime(update_str, '%b %d %Y, %H:%M')
         # but then can't dump to JSON, so leaving as string like this.
         collage['updated'] = update_str.strip().lower()
+        collage['updated_relative'] = None
         yield collage
 
 
@@ -56,12 +55,7 @@ class Session(requests.Session):
     def __init__(self, hostname, *args, **kwargs):
         super(Session, self).__init__(*args, **kwargs)
         self.headers.update(Session.HEADERS)
-
-        parsed = urlparse.urlparse(hostname)
-        host = parsed.netloc
-        if not host:
-            host, _ = urlparse.splithost(parsed.path)
-        self.hostname = 'https://{}'.format(host)
+        self.hostname = 'https://{}'.format(hostname)
 
     def url(self, path):
         return urlparse.urljoin(self.hostname, path)
@@ -71,17 +65,15 @@ class Session(requests.Session):
         r = self.post(self.url('login.php'), data=data)
         return r.status_code == 200
 
-    def list_bookmarked_collages(self):
+    def bookmarked_collages(self, max_pages=20):
         data = {'type': 'collages', 'page': 1}
-        collages = []
         while True:
             r = self.get(self.url('bookmarks.php'), params=data)
             if not r.status_code == 200:
                 return
             tree = lxml.html.fromstring(r.content)
-            collages.extend(parse_collages(tree))
-            if tree.find_class('pager_next'):
+            yield from parse_collages(tree)
+            if tree.find_class('pager_next') and data['page'] < max_pages:
                 data['page'] += 1
             else:
                 break
-        return collages
